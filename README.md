@@ -120,3 +120,43 @@ Used = in reset branches (and once in a pointer increment) while using <= elsewh
 5. Array-vs-vector port declarations in fifomem
 Declared ports as wire waddr [AWIDTH-1:0] (an array of 1-bit wires) instead of wire [AWIDTH-1:0] waddr (a 4-bit vector), and sized memory depth with $clog2(AWIDTH) instead of 1<<AWIDTH. Lesson: bracket placement decides vector vs array — width goes before the name; and address width vs memory depth are different quantities (AWIDTH addresses 2^AWIDTH slots).
 
+## 5. Timing & Constraints (XDC)
+
+The async crossing is intentionally not timed by static timing analysis (STA),
+because wclk and rclk are unrelated clocks, metastability on that path is
+handled by the 2-flop synchronizer's settling time, not by timing closure.
+The constraints tell STA exactly that.
+
+### async_fifo.xdc
+
+
+- `create_clock` for wclk (10 ns / 100 MHz) and rclk (14 ns / ~71 MHz):
+  defines the two clocks so STA knows their periods.
+- `set_clock_groups -asynchronous -group {wclk} -group {rclk}`:
+  declares the two domains unrelated, so STA does NOT analyze any path
+  crossing between them (which would otherwise report false violations).
+- (Alternative/complementary) `set_false_path` on the synchronizer's first
+  flop targets the crossing specifically; set_clock_groups is broader and
+  sufficient here-IMP - A CDC path must be marked as a false/async path so STA doesn't try to close timing on it, the crossing is made safe by the synchronizer's    settling time, not by meeting setup/hold. Without the constraint, the tool reports false violations on a path that is async by design.
+
+### Synthesis result (Artix-7 xc7a35t)
+
+
+- Synthesis: 0 errors, 0 warnings.
+- Utilization: 30 flip-flops (all async-reset + clock-enable, FDCE),
+  16x8 buffer inferred as distributed RAM (no Block RAM needed at this depth),
+  ~24 LUTs, 2 global clock buffers (one per clock) confirming the dual-clock
+  design. <0.2% device utilization.
+
+### Timing closure
+<img width="1273" height="317" alt="image" src="https://github.com/user-attachments/assets/13649e52-274b-4563-99f9-77bc9fb7418e" />
+<img width="1607" height="372" alt="image" src="https://github.com/user-attachments/assets/01512eb1-1e58-4585-9449-0c134e1325b6" />
+
+
+- All timing constraints met. Setup WNS = +6.5 ns, Hold WHS = +0.036 ns,
+  0 failing endpoints across 90.
+- Inter-clock paths between wclk and rclk: none analyzed — correctly excluded
+  by set_clock_groups, which is the expected result for an intentional CDC
+  crossing.
+
+
