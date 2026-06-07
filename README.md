@@ -23,7 +23,8 @@ empty = (wr_ptr == rd_ptr) — all bits equal thus both pointers at the same loc
 full = (addresses equal) && (wrap bits differ) — writer lapped reader once.
 
 ### Verification (testbench + waveform)
-<img width="1557" height="785" alt="Screenshot 2026-06-06 202805" src="https://github.com/user-attachments/assets/3eb775e8-1bb1-47f8-94a4-d416fa118e05" />
+<img width="1570" height="807" alt="image" src="https://github.com/user-attachments/assets/2f50bde8-e28c-418d-a7aa-ec3688eb9c8e" />
+
 
 
 ## 2. Asynchronous FIFO with CDC
