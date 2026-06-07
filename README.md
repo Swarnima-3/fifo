@@ -91,7 +91,10 @@ empty is a plain equality — rgray == wgray_synced, no inversion. Why? Because 
 
 
 ### Verification
-<img width="1577" height="812" alt="Screenshot 2026-06-07 113722" src="https://github.com/user-attachments/assets/69f1d3bf-2dc7-4154-9d47-b2cc85c514f1" />
+<img width="1572" height="815" alt="image" src="https://github.com/user-attachments/assets/3ec4c741-480d-4848-b1e8-9981cace00da" />
+(fig. write clock faster)
+<img width="1550" height="792" alt="image" src="https://github.com/user-attachments/assets/023a3f69-cf3c-4107-a4b8-cef1de39717e" />
+(fig. write clock slower)
 
 
 ## 3. FIFO depth derivation
