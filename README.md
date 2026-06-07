@@ -23,7 +23,8 @@ empty = (wr_ptr == rd_ptr) — all bits equal thus both pointers at the same loc
 full = (addresses equal) && (wrap bits differ) — writer lapped reader once.
 
 ### Verification (testbench + waveform)
-![WAVEFORM_SYNCFIFO](image-1.png)
+<img width="1557" height="785" alt="Screenshot 2026-06-06 202805" src="https://github.com/user-attachments/assets/3eb775e8-1bb1-47f8-94a4-d416fa118e05" />
+
 
 ## 2. Asynchronous FIFO with CDC
 
@@ -89,7 +90,8 @@ empty is a plain equality — rgray == wgray_synced, no inversion. Why? Because 
 
 
 ### Verification
-![WAVEFORM_ASYNCFIFO](image.png)
+<img width="1577" height="812" alt="Screenshot 2026-06-07 113722" src="https://github.com/user-attachments/assets/69f1d3bf-2dc7-4154-9d47-b2cc85c514f1" />
+
 
 ## 3. FIFO depth derivation
 General principle:
