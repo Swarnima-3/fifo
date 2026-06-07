@@ -22,6 +22,9 @@ Thus to help differentiate between the two conditions we will make use of an ext
 empty = (wr_ptr == rd_ptr) — all bits equal thus both pointers at the same location.
 full = (addresses equal) && (wrap bits differ) — writer lapped reader once.
 
+### Read style — registered output
+The sync FIFO uses a registered read: dout is updated inside the clocked block, so read data appears one clock AFTER rd_en is asserted (1-cycle latency). This is the standard FPGA default — it maps cleanly to Block RAM (whose output is registered) and breaks the combinational path for easier timing closure. The trade-off is one cycle of read latency.
+
 ### Verification (testbench + waveform)
 <img width="1570" height="807" alt="image" src="https://github.com/user-attachments/assets/2f50bde8-e28c-418d-a7aa-ec3688eb9c8e" />
 
@@ -89,6 +92,12 @@ Each synchronizer runs on the clock of the domain it's delivering to.
 full means binary pointers differ only in the MSB; because gray[i]=bin[i]^bin[i+1], flipping the binary MSB flips the top two Gray bits; hence the full test inverts rgray's top two bits before comparing. Empty needs no inversion because the pointers are fully equal there — zero binary bits flipped, zero Gray bits flipped.
 empty is a plain equality — rgray == wgray_synced, no inversion. Why? Because empty in binary was "pointers fully equal" (same address, same lap — no MSB flip). No bits flipped in binary → no bits flipped in Gray → plain ==
 
+### Read style — combinational (FWFT)
+Unlike the sync FIFO, the async FIFO memory read is combinational (assign rdata = mem[raddr]) — data is valid the SAME cycle, with no 1-cycle latency. This is First-Word-Fall-Through (FWFT) style. It is safe here because the read address comes from an already-registered pointer (rbin), so rdata is stable for the whole read cycle without needing another register.
+
+Why two different styles: registered read (sync FIFO) is the FPGA default — maps to BRAM, eases timing, costs 1 cycle latency. Combinational/FWFT read (async FIFO) is lower latency and is what streaming protocols like AXI-Stream expect. Both are industry standard; the right choice depends on context (timing closure vs. latency, BRAM vs. distributed RAM, protocol requirements).
+
+Xilinx/Intel FIFO IP generators expose this as a "Standard vs. FWFT" option.
 
 ### Verification
 <img width="1572" height="815" alt="image" src="https://github.com/user-attachments/assets/3ec4c741-480d-4848-b1e8-9981cace00da" />
@@ -165,4 +174,30 @@ The constraints tell STA exactly that.
   by set_clock_groups, which is the expected result for an intentional CDC
   crossing.
 
+## 6. Self-Checking Verification (Scoreboard)
+
+Both FIFOs are verified with self-checking testbenches, not waveform inspection. The core is a reference model: a SystemVerilog queue (logic [W-1:0] model[$]) that mirrors what the FIFO should contain. On every accepted write the data is pushed to the queue; on every accepted read the queue is popped to get the EXPECTED value, which is compared against the DUT output. Mismatches are counted and a PASS/FAIL banner is printed at the end.
+
+Key features that address real DV concerns:
+- Reference model (queue) + scoreboard → automatic checking, no eyeballing.
+- Constrained-random, UNGATED wr_en/rd_en → the FIFO is deliberately driven into write-while-full and read-while-empty, proving the DUT correctly ignores them. Coverage counters report how many times each corner was exercised.
+- PASS/FAIL banner + error count → result is readable from the log.
+- $dumpfile/$dumpvars → waveform is reproducible by anyone cloning the repo.
+
+Driving on negedge: stimulus is driven and DUT outputs are sampled on the negedge, because the DUT updates its outputs on the posedge. Reading on the opposite edge avoids sampling signals while they are mid-change (a TB/DUT race), so full/empty/dout are always read when stable.
+
+Registered vs combinational read in the TB: the sync TB defers its compare by one cycle (saving the expected value and checking dout the next cycle) because the sync FIFO read is registered. The async TB compares immediately, because the async read is combinational (rdata valid the same cycle).
+
+### Sync FIFO result
+Over ~2000 randomized cycles: 988 writes, 975 reads, 0 mismatches.
+Corners exercised: write-while-full = 31, read-while-empty = 32. RESULT: PASS.
+
+### Async FIFO result (both rate directions)
+A WR_SLOW parameter flips which clock is faster, so both directions are tested:
+- Writer faster than reader → FIFO fills, wfull repeatedly asserted (back-pressure throttles the writer to the reader's rate).
+- Reader faster than writer → FIFO starves, rempty repeatedly asserted.
+Both runs: 0 mismatches, FIFO ordering preserved across the clock crossing.
+
+### Debugging note — scoreboard off-by-one
+The sync scoreboard initially failed with a CONSISTENT "got = expected + 1" on every read. The constant offset (not random) pointed to a testbench timing skew, not a FIFO bug: the model captured din, but because din was incremented every cycle and the DUT samples din on the posedge, the DUT latched a din one higher than the value pushed to the model. Fixed by incrementing din first, pushing that exact value, and only advancing din on accepted writes — aligning the reference value with what the DUT actually stores. Lesson: a systematic offset in a scoreboard is almost always a drive/sample alignment issue in the TB; read the SHAPE of the failure before digging in.
 
