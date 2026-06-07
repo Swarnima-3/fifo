@@ -99,6 +99,9 @@ Why two different styles: registered read (sync FIFO) is the FPGA default — ma
 
 Xilinx/Intel FIFO IP generators expose this as a "Standard vs. FWFT" option.
 
+### Why the memory itself needs no CDC protection
+The dual-port memory is written on wclk and read on rclk with no synchronizer inside it. This is safe because the full/empty flags guarantee the write and read pointers are never on the same slot at the same time — the writer always works ahead, the reader always trails behind. The only signals that cross domains are the pointers (handled by Gray code + 2-flop synchronizers); the memory ports never collide, so no metastability risk exists there.
+
 ### Verification
 <img width="1572" height="815" alt="image" src="https://github.com/user-attachments/assets/3ec4c741-480d-4848-b1e8-9981cace00da" />
 (fig. write clock faster)
