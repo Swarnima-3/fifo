@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-module tb_async_fifonew;
+module tb_async_fifo;
     parameter AWIDTH = 4;
     parameter DWIDTH = 8;
 
