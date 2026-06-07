@@ -141,6 +141,8 @@ The constraints tell STA exactly that.
 
 ### Synthesis result (Artix-7 xc7a35t)
 
+  <img width="417" height="397" alt="image" src="https://github.com/user-attachments/assets/547509a1-2939-415d-bd62-9b70215e8daa" />
+   <img width="697" height="341" alt="image" src="https://github.com/user-attachments/assets/9c44cfcb-59c6-44e0-8713-0a596ea72255" />
 
 - Synthesis: 0 errors, 0 warnings.
 - Utilization: 30 flip-flops (all async-reset + clock-enable, FDCE),
